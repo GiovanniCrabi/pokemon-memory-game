@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, startTransition } from 'react';
-import { Sparkles, RotateCcw, Loader2 } from 'lucide-react';
+import { Sparkles, RotateCcw, Loader2, Globe } from 'lucide-react';
+
+type Idioma = 'pt' | 'en' | null;
 
 interface GameState {
     palavra: string;
@@ -11,6 +13,7 @@ interface GameState {
 }
 
 export const JogoDaForca: React.FC = () => {
+    const [idioma, setIdioma] = useState<Idioma>(null);
     const [gameState, setGameState] = useState<GameState>({
         palavra: '',
         letrasAdvinhadas: new Set(),
@@ -25,18 +28,9 @@ export const JogoDaForca: React.FC = () => {
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     };
 
-    const palavrasReserva = [
-        'programador', 'computador', 'javascript', 'codigo', 'sistema', 'arquivo',
-        'teclado', 'monitor', 'internet', 'software', 'hardware', 'memoria',
-        'processo', 'funcao', 'variavel', 'algoritmo', 'database', 'servidor',
-        'cliente', 'projeto', 'design', 'criativo', 'inovacao', 'tecnologia',
-        'virtual', 'digital', 'analise', 'desenvolvimento', 'aplicacao', 'interface',
-        'usuario', 'senha', 'seguranca', 'dados', 'nuvem', 'backup', 'arquivo',
-        'pasta', 'documento', 'texto', 'imagem', 'video', 'audio', 'musica',
-        'jogo', 'diversao', 'entretenimento', 'cultura', 'arte', 'cinema',
-        'livro', 'historia', 'ciencia', 'matematica', 'fisica', 'quimica',
-        'biologia', 'geografia', 'literatura', 'filosofia', 'educacao', 'escola', 'bola', 'casa', 'gato', 'cachorro', 'sol', 'lua', 'estrela',
-        'agua', 'fogo', 'terra', 'ar', 'flor', 'arvore',
+    const palavrasReservaPt = [
+        'bola', 'casa', 'gato', 'cachorro', 'sol', 'lua', 'estrela',
+        'agua', 'fogo', 'terra', 'flor', 'arvore',
         'carro', 'bicicleta', 'aviao', 'navio',
         'mae', 'pai', 'irmao', 'amigo',
         'brincar', 'correr', 'pular', 'rir',
@@ -44,49 +38,69 @@ export const JogoDaForca: React.FC = () => {
         'azul', 'vermelho', 'verde', 'amarelo',
         'feliz', 'triste', 'legal',
         'peixe', 'passaro', 'leao',
-        'numero', 'letra', 'palavra'
+        'numero', 'letra', 'palavra', 'escola',
+        'livro', 'mesa', 'cadeira', 'porta', 'janela',
+        'sapato', 'roupa', 'boneca', 'jogo', 'musica'
     ];
 
+    const palavrasReservaEn = [
+        'ball', 'house', 'cat', 'dog', 'sun', 'moon', 'star',
+        'water', 'fire', 'earth', 'flower', 'tree',
+        'car', 'bike', 'plane', 'ship',
+        'mom', 'dad', 'brother', 'friend',
+        'play', 'run', 'jump', 'laugh',
+        'eat', 'drink', 'sleep',
+        'blue', 'red', 'green', 'yellow',
+        'happy', 'sad', 'cool',
+        'fish', 'bird', 'lion',
+        'number', 'letter', 'word', 'school',
+        'book', 'table', 'chair', 'door', 'window',
+        'shoe', 'shirt', 'doll', 'game', 'music'
+    ];
+
+    const textos = {
+        pt: {
+            titulo: 'Jogo da Forca',
+            subtitulo: 'Adivinhe a palavra antes que o boneco seja enforcado!',
+            tentativas: 'Tentativas Restantes',
+            novaPalavra: 'Nova Palavra',
+            ganhou: '🎉 Parabéns! 🎉',
+            msgGanhou: 'Você acertou a palavra:',
+            perdeu: '😢 Game Over! 😢',
+            msgPerdeu: 'A palavra era:',
+            clique: 'Clique para Jogar',
+            escolhaIdioma: 'Escolha o Idioma',
+            portugues: 'Português',
+            ingles: 'English',
+            carregando: 'Carregando palavra...'
+        },
+        en: {
+            titulo: 'Hangman Game',
+            subtitulo: 'Guess the word before the hangman is complete!',
+            tentativas: 'Attempts Remaining',
+            novaPalavra: 'New Word',
+            ganhou: '🎉 Congratulations! 🎉',
+            msgGanhou: 'You guessed the word:',
+            perdeu: '😢 Game Over! 😢',
+            msgPerdeu: 'The word was:',
+            clique: 'Click to Play',
+            escolhaIdioma: 'Choose Language',
+            portugues: 'Português',
+            ingles: 'English',
+            carregando: 'Loading word...'
+        }
+    };
+
     const buscarNovaPalavra = useCallback(async () => {
+        if (!idioma) return;
+
         setGameState(prev => ({ ...prev, status: 'carregando' }));
 
         try {
-            let palavraEscolhida: string | null = null;
-
-            try {
-                const response = await fetch('https://random-word-api.herokuapp.com/word?number=10&lang=pt', {
-                });
-
-                if (response.ok) {
-                    const palavras = await response.json();
-
-                    if (Array.isArray(palavras) && palavras.length > 0) {
-                        const palavrasFiltradas = palavras.filter(p => {
-                            if (typeof p !== 'string') return false;
-                            const palavraLimpa = p.toLowerCase().trim();
-                            const palavraSemAcento = removerAcentos(palavraLimpa);
-                            return palavraSemAcento.length >= 4 &&
-                                palavraSemAcento.length <= 10 &&
-                                /^[a-z]+$/.test(palavraSemAcento);
-                        });
-
-                        if (palavrasFiltradas.length > 0) {
-                            const palavraSelecionada = palavrasFiltradas[
-                                Math.floor(Math.random() * palavrasFiltradas.length)
-                            ].toLowerCase();
-                            palavraEscolhida = removerAcentos(palavraSelecionada);
-                        }
-                    }
-                }
-            } catch (apiError) {
-                console.log('API indisponível, usando palavras locais');
-            }
-
-            if (!palavraEscolhida) {
-                palavraEscolhida = palavrasReserva[
-                    Math.floor(Math.random() * palavrasReserva.length)
-                ];
-            }
+            const palavrasReserva = idioma === 'pt' ? palavrasReservaPt : palavrasReservaEn;
+            const palavraEscolhida = palavrasReserva[
+                Math.floor(Math.random() * palavrasReserva.length)
+            ];
 
             setGameState({
                 palavra: palavraEscolhida,
@@ -96,6 +110,7 @@ export const JogoDaForca: React.FC = () => {
             });
         } catch (error) {
             console.error('Erro ao buscar palavra:', error);
+            const palavrasReserva = idioma === 'pt' ? palavrasReservaPt : palavrasReservaEn;
             const palavraFallback = palavrasReserva[
                 Math.floor(Math.random() * palavrasReserva.length)
             ];
@@ -106,16 +121,20 @@ export const JogoDaForca: React.FC = () => {
                 status: 'jogando'
             });
         }
-    }, []);
+    }, [idioma]);
 
     useEffect(() => {
-        if (!hasInitialized.current) {
+        if (idioma && !hasInitialized.current) {
             hasInitialized.current = true;
             startTransition(() => {
                 buscarNovaPalavra();
             });
         }
-    }, [buscarNovaPalavra]);
+    }, [idioma, buscarNovaPalavra]);
+
+    const selecionarIdioma = (lang: Idioma) => {
+        setIdioma(lang);
+    };
 
     const tentarLetra = (letra: string) => {
         if (gameState.status !== 'jogando') return;
@@ -185,32 +204,81 @@ export const JogoDaForca: React.FC = () => {
         );
     };
 
+    // Tela de seleção de idioma
+    if (!idioma) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-600 to-orange-500 flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 max-w-2xl w-full mx-4">
+                    <div className="text-center mb-8">
+                        <Globe className="w-20 h-20 text-purple-600 mx-auto mb-4" />
+                        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-2">
+                            {textos.pt.escolhaIdioma} / Choose Language
+                        </h1>
+                        <p className="text-gray-600">Selecione o idioma para jogar</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <button
+                            onClick={() => selecionarIdioma('pt')}
+                            className="bg-gradient-to-br from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white rounded-2xl p-8 transform transition-all duration-300 hover:scale-105 shadow-lg"
+                        >
+                            <div className="text-6xl mb-4">🇧🇷</div>
+                            <h2 className="text-3xl font-bold mb-2">Português</h2>
+                            <p className="text-sm opacity-90">Palavras simples em português</p>
+                        </button>
+
+                        <button
+                            onClick={() => selecionarIdioma('en')}
+                            className="bg-gradient-to-br from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white rounded-2xl p-8 transform transition-all duration-300 hover:scale-105 shadow-lg"
+                        >
+                            <div className="text-6xl mb-4">🇬🇧</div>
+                            <h2 className="text-3xl font-bold mb-2">English</h2>
+                            <p className="text-sm opacity-90">Simple words in English</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const t = textos[idioma];
+
     if (gameState.status === 'carregando') {
         return (
-            <div className="min-h-screen bg-linear-to-br from-purple-500 via-pink-500 to-red-500 flex items-center justify-center p-3 sm:p-4">
+            <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 flex items-center justify-center p-3 sm:p-4">
                 <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl p-6 sm:p-8 md:p-10 lg:p-12 text-center max-w-sm w-full mx-4">
                     <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 text-purple-600 animate-spin mx-auto mb-3 sm:mb-4" />
-                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Carregando palavra...</p>
+                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">{t.carregando}</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-linear-to-br from-purple-900 via-pink-600 to-orange-500 flex items-center justify-center p-2 sm:p-4 md:p-6 lg:p-8">
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-600 to-orange-500 flex items-center justify-center p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-6 lg:p-8 max-w-4xl w-full mx-auto">
                 <div className="text-center mb-3 sm:mb-4 md:mb-6">
                     <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-1 sm:mb-2 flex items-center justify-center gap-1 sm:gap-2">
                         <Sparkles className="text-yellow-500 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-                        Jogo da Forca
+                        {t.titulo}
                         <Sparkles className="text-yellow-500 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                     </h1>
-                    <p className="text-xs sm:text-sm md:text-base text-gray-600 px-2">Adivinhe a palavra antes que o boneco seja enforcado!</p>
+                    <p className="text-xs sm:text-sm md:text-base text-gray-600 px-2">{t.subtitulo}</p>
+                    <button
+                        onClick={() => {
+                            setIdioma(null);
+                            hasInitialized.current = false;
+                        }}
+                        className="mt-2 text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 mx-auto"
+                    >
+                        <Globe className="w-3 h-3" />
+                        {idioma === 'pt' ? 'Mudar idioma' : 'Change language'}
+                    </button>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-3 md:gap-0 mb-3 sm:mb-4 md:mb-6 bg-gray-100 rounded-lg p-2 sm:p-3 md:p-4">
                     <div className="text-center">
-                        <p className="text-xs sm:text-sm text-gray-600">Tentativas Restantes</p>
+                        <p className="text-xs sm:text-sm text-gray-600">{t.tentativas}</p>
                         <p className="text-lg sm:text-xl md:text-2xl font-bold text-red-600">{gameState.tentativasRestantes}</p>
                     </div>
                     <button
@@ -218,7 +286,7 @@ export const JogoDaForca: React.FC = () => {
                         className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 md:px-6 md:py-2 rounded-lg flex items-center gap-1 sm:gap-2 transition-colors disabled:opacity-50 text-xs sm:text-sm md:text-base font-medium"
                     >
                         <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 md:w-[18px] md:h-[18px]" />
-                        Nova Palavra
+                        {t.novaPalavra}
                     </button>
                 </div>
 
@@ -231,16 +299,16 @@ export const JogoDaForca: React.FC = () => {
                 </div>
 
                 {gameState.status === 'ganhou' && (
-                    <div className="text-center bg-linear-to-br from-green-400 to-blue-500 text-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl mb-3 sm:mb-4 md:mb-6 animate-pulse">
-                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">🎉 Parabéns! 🎉</h2>
-                        <p className="text-sm sm:text-base md:text-lg px-2">Você acertou a palavra: <span className="font-bold">{gameState.palavra.toUpperCase()}</span></p>
+                    <div className="text-center bg-gradient-to-br from-green-400 to-blue-500 text-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl mb-3 sm:mb-4 md:mb-6 animate-pulse">
+                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">{t.ganhou}</h2>
+                        <p className="text-sm sm:text-base md:text-lg px-2">{t.msgGanhou} <span className="font-bold">{gameState.palavra.toUpperCase()}</span></p>
                     </div>
                 )}
 
                 {gameState.status === 'perdeu' && (
-                    <div className="text-center bg-linear-to-br from-red-400 to-pink-500 text-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl mb-3 sm:mb-4 md:mb-6">
-                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">😢 Game Over! 😢</h2>
-                        <p className="text-sm sm:text-base md:text-lg px-2">A palavra era: <span className="font-bold">{gameState.palavra.toUpperCase()}</span></p>
+                    <div className="text-center bg-gradient-to-br from-red-400 to-pink-500 text-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl mb-3 sm:mb-4 md:mb-6">
+                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">{t.perdeu}</h2>
+                        <p className="text-sm sm:text-base md:text-lg px-2">{t.msgPerdeu} <span className="font-bold">{gameState.palavra.toUpperCase()}</span></p>
                     </div>
                 )}
 
@@ -259,9 +327,9 @@ export const JogoDaForca: React.FC = () => {
                                     className={`
                     w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-11 lg:h-11 rounded-md sm:rounded-lg font-bold text-xs sm:text-sm md:text-base lg:text-lg transition-all transform
                     ${jaUsada ? 'cursor-not-allowed opacity-50' : 'hover:scale-110 active:scale-95'}
-                    ${correta ? 'bg-linear-to-br from-green-400 to-green-600 text-white shadow-lg' : ''}
-                    ${incorreta ? 'bg-linear-to-br from-red-400 to-red-600 text-white shadow-lg' : ''}
-                    ${!jaUsada ? 'bg-linear-to-br from-purple-500 to-purple-700 text-white hover:from-purple-600 hover:to-purple-800 shadow-md' : ''}
+                    ${correta ? 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg' : ''}
+                    ${incorreta ? 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-lg' : ''}
+                    ${!jaUsada ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white hover:from-purple-600 hover:to-purple-800 shadow-md' : ''}
                   `}
                                 >
                                     {letra.toUpperCase()}
